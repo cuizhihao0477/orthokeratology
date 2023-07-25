@@ -51,18 +51,23 @@ def fit_randomforest_model(x, y):
     # 返回网格搜索后的最优模型
     return grid.best_estimator_
 '''
-需要更改的四个值
+需要更改的两个值
 一个是加载的csv文件名称
-toric的bool值
 需要预测的参数
-文件输出名称'''
+'''
+filepath = './crt_ordinary_test.csv'
+need_predict = 'LZA' #需要预测的参数
 
-data = pd.read_csv('./crt_ordinary_test.csv', encoding='GB2312') #载入不同的文件
+data = pd.read_csv(filepath, encoding='GB2312') #载入不同的文件
 data = data.dropna(axis=0,how='all') #去除都是nan的行
 data = pd.DataFrame(KNN(k=6).fit_transform(data))
 
-# 删除对应行
-toric = False  # bool值，是否散光，这个需要更改
+
+if 'toric' in filepath:
+    toric = True
+else:
+    toric = False
+# bool值，是否散光
 data.columns = \
 [['年龄', '球镜', 'Fk', 'Sk', '角膜直径', 'BC', 'RZD', 'LZA', '镜片直径', '基线眼轴', '半年眼轴', '1年眼轴'],
  ['年龄', '球镜', 'Fk', 'Sk', '角膜直径', 'BC', 'RZD1', 'RZD2', 'LZA1', 'LZA2', '镜片直径', '基线眼轴',
@@ -71,7 +76,7 @@ features = data.drop(labels=[['BC', 'RZD', 'LZA', '镜片直径', '基线眼轴'
                              ['BC', 'RZD1', 'RZD2', 'LZA1', 'LZA2', '镜片直径', '基线眼轴', '半年眼轴', '1年眼轴']][
     toric],
                      axis=1)
-prices = data['LZA'] #需要预测的参数
+prices = data[need_predict]
 
 X_train, X_test, y_train, y_test = train_test_split(features, prices, test_size=0.2, random_state=10)
 
@@ -82,10 +87,16 @@ x_test = X_test.values.tolist()
 optimal_reg = fit_randomforest_model(X_train, y_train)
 y_test_predict = optimal_reg.predict(X_test)
 r2 = performance_metric(y_test, y_test_predict)
-joblib.dump(optimal_reg, "model_crt_test.m") #模型的文件名称
+#模型的文件名称
+if toric:
+    joblib.dump(optimal_reg, 'model_crt_toric_' + prices.name + ".m")
+else:
+    joblib.dump(optimal_reg, 'model_crt_' + prices.name + ".m")
 
 
-# 输出最优模型的 'max_depth' 参数，精确度R^2的值，还有预测csv文件含有的样本量
+
+# 输出最优模型的预测特征值， 'max_depth' 参数，精确度R^2的值，还有预测csv文件含有的样本量
+print("the predicting price is {:}.".format(need_predict))
 print("Parameter 'max_depth' is {} for the optimal model.".format(optimal_reg.get_params()['max_depth']))
 print("Optimal model has R^2 score {:,.2f} on test data".format(r2))
-print("sample size is  {} on the data".format(data.shape[0]-1))
+print("sample size is  {} on the data".format(data.shape[0] - 1))
